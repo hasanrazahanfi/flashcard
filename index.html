@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en"> 
+ <head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>Flashcards - Premium UI</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+  <style>
+    body {
+      background: linear-gradient(to right, #3a0ca3, #7209b7);
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .glow-btn {
+      background: linear-gradient(90deg, #ff6ec4, #7873f5);
+      color: white;
+      box-shadow: 0 4px 20px rgba(255, 110, 196, 0.5);
+      transition: all 0.3s ease-in-out;
+    }
+
+    .glow-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 24px rgba(255, 110, 196, 0.7);
+    }
+
+    .card {
+      perspective: 1000px;
+    }
+
+    .inner {
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .flipped .inner {
+      transform: rotateY(180deg);
+    }
+
+    .front, .back {
+      backface-visibility: hidden;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 1rem;
+      padding: 1rem;
+    }
+
+    .back {
+      transform: rotateY(180deg);
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px #ff6ec4;
+    }
+  </style> 
+ </head> 
+ <body class="text-white p-4 min-h-screen"> 
+  <!-- Flashcard Creator --> 
+  <div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl shadow-2xl max-w-xl mx-auto mb-8"> 
+   <h2 class="text-2xl font-bold text-center mb-4">Create a Flashcard</h2> 
+   <input id="question" type="text" placeholder="Enter Question" class="w-full mb-3 p-3 rounded-lg bg-white/90 text-black font-medium placeholder-gray-600"> 
+   <textarea id="answer" placeholder="Enter Answer" class="w-full mb-3 p-3 rounded-lg bg-white/90 text-black font-medium placeholder-gray-600"></textarea> 
+   <input id="image" type="file" accept="image/*" class="w-full mb-4 p-2 text-sm bg-white/90 text-black rounded-lg"> 
+   <button onclick="createCard()" class="glow-btn w-full py-3 text-lg rounded-lg font-semibold">Create Flashcard</button> 
+  </div> 
+
+  <!-- Flashcards Grid --> 
+  <div id="flashcards" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 px-2 max-w-6xl mx-auto"></div> 
+
+  <script>
+    const flashcardsContainer = document.getElementById('flashcards');
+
+    // Load saved cards
+    window.onload = () => {
+      const saved = localStorage.getItem('flashcards');
+      if (saved) {
+        JSON.parse(saved).forEach(data => createCardElement(data, false));
+      }
+    };
+
+    function createCard() {
+      const question = document.getElementById('question').value;
+      const answer = document.getElementById('answer').value;
+      const imageInput = document.getElementById('image');
+      const file = imageInput.files[0];
+
+      if (!question || !answer) return;
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const imageURL = e.target.result;
+          const cardData = { question, answer, imageURL };
+          createCardElement(cardData, true);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const cardData = { question, answer, imageURL: null };
+        createCardElement(cardData, true);
+      }
+
+      document.getElementById('question').value = '';
+      document.getElementById('answer').value = '';
+      document.getElementById('image').value = '';
+    }
+
+    function createCardElement({ question, answer, imageURL }, save) {
+      const card = document.createElement('div');
+      card.className = 'card bg-white text-black rounded-2xl relative h-80 w-full max-w-xs mx-auto shadow-xl cursor-pointer overflow-hidden';
+      card.onclick = () => card.classList.toggle('flipped');
+
+      card.innerHTML = `
+        <div class="inner">
+          <div class="front bg-white flex items-center justify-center text-center text-xl font-bold p-4">
+            ${question}
+          </div>
+          <div class="back bg-gradient-to-b from-purple-200 to-purple-100 text-black flex flex-col justify-between p-4 rounded-2xl overflow-y-auto">
+            <div>
+              <p class="text-base font-semibold mb-2">${answer}</p>
+              ${imageURL ? <img src="${imageURL}" alt="Flashcard Image" class="w-full h-full object-cover mt-2 rounded-lg" /> : ''}
+            </div>
+            <button class="mt-3 px-4 py-2 bg-red-500 text-white rounded-lg self-end hover:bg-red-600 delete-btn">Delete</button>
+          </div>
+        </div>
+      `;
+
+      flashcardsContainer.appendChild(card);
+
+      const deleteBtn = card.querySelector('.delete-btn');
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation(); // card flip na ho
+        card.remove();
+        let saved = JSON.parse(localStorage.getItem('flashcards') || '[]');
+        saved = saved.filter(fc => !(fc.question === question && fc.answer === answer));
+        localStorage.setItem('flashcards', JSON.stringify(saved));
+      };
+
+      if (save) {
+        const saved = JSON.parse(localStorage.getItem('flashcards') || '[]');
+        saved.push({ question, answer, imageURL });
+        localStorage.setItem('flashcards', JSON.stringify(saved));
+      }
+    }
+  </script> 
+ </body>
+</html>
